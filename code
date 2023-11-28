@@ -1,0 +1,81 @@
+import requests
+import tkinter as tk
+from tkinter import Label, Entry, Button, Radiobutton,StringVar
+import matplotlib.pyplot as plt
+from datetime import datetime
+
+def get_weather(api_key, city):
+    base_url = "http://api.openweathermap.org/data/2.5/forecast"
+    params = {'q': city,'appid': api_key,'units': 'metric'}
+
+    try:
+        response = requests.get(base_url, params=params)
+        data = response.json()
+
+        if response.status_code == 200:
+            temperatures = [entry['main']['temp'] for entry in data['list']]
+            timestamps = [entry['dt_txt'] for entry in data['list']]
+            humidity = [entry['main']['humidity'] for entry in data['list']]
+            wind_speed = [entry['wind']['speed'] for entry in data['list']]
+            return timestamps, temperatures, humidity, wind_speed
+        else:
+            return None, f"Error: {data['message']}"
+
+    except Exception as e:
+        return None, f"Error: {str(e)}"
+
+def get_weather_for_city():
+    city = city_entry.get()
+    timestamps, temperatures, humidity, wind_speed = get_weather(api_key, city)
+
+    if temperatures:
+        plot_line_graph(timestamps, temperatures)
+        result_label.config(text=f"Humidity: {humidity[0]}%\nWind Speed: {wind_speed[0]} m/s")
+    else:
+        result_label.config(text=f"Error fetching weather data")
+
+def plot_line_graph(timestamps, temperatures):
+    plt.figure(figsize=(10, 6))
+    plt.plot(timestamps, temperatures, marker='o', linestyle='-', color='b')
+    plt.title("Hourly Temperature Forecast")
+    plt.xlabel("Timestamp")
+    plt.ylabel(f"Temperature ({unit_var.get()})")
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+    plt.show()
+
+api_key = "eb4cb5360a01635fc6b465d404a6bf5b"
+
+root = tk.Tk()
+root.title("Weather App")
+root.geometry('1980x800')
+root.config(background='light blue')
+
+label = Label(root, text="Enter city name:",bg='light green')
+label.pack(pady=22)
+label.config(font=("Times New Roman", 25))
+
+city_entry = Entry(root,bg='light grey')
+city_entry.pack(pady=10)
+city_entry.config(font=("Times New Roman", 31))
+
+get_weather_button = Button(root, text="Get Weather", command=get_weather_for_city, bg='light pink')
+get_weather_button.pack(pady=22)
+get_weather_button.config(font=("Times New Roman", 31))
+
+unit_var = StringVar()
+unit_var.set("metric")  
+
+celsius_button = Radiobutton(root, text="Celsius", variable=unit_var, value="metric", bg='aquamarine')
+celsius_button.pack(pady=5)
+celsius_button.config(font=("Times New Roman", 31))
+
+fahrenheit_button = Radiobutton(root, text="Fahrenheit", variable=unit_var, value="imperial", bg='aquamarine')
+fahrenheit_button.pack(pady=5)
+fahrenheit_button.config(font=("Times New Roman", 31))
+
+result_label = Label(root, text="",bg='light green')
+result_label.pack(pady=20)
+result_label.config(font=("Times New Roman", 31))
+
+root.mainloop()
