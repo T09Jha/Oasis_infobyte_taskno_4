@@ -4,6 +4,7 @@
 # LANGUAGE AND LIBRARIES
 
 - Python
+- JavaScript
 - Tkinter
 - Requests
 - Datetime
