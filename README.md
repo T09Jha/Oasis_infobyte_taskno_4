@@ -1,4 +1,3 @@
-# Oasis_infobyte_taskno_6
 # WEATHER APP
 
 # LANGUAGE AND LIBRARIES
