@@ -1,12 +1,20 @@
 import requests
 import tkinter as tk
-from tkinter import Label, Entry, Button, Radiobutton,StringVar
+from tkinter import Label, Entry, Button, Radiobutton, StringVar
+from PIL import Image, ImageTk
 import matplotlib.pyplot as plt
 from datetime import datetime
+from geopy.geocoders import Nominatim
 
-def get_weather(api_key, city):
-    base_url = "http://api.openweathermap.org/data/2.5/forecast"
-    params = {'q': city,'appid': api_key,'units': 'metric'}
+def get_weather(api_key, city=None, latitude=None, longitude=None):
+    if city:
+        base_url = "http://api.openweathermap.org/data/2.5/forecast"
+        params = {'q': city,'appid': api_key,'units': 'metric'}
+    elif latitude and longitude:
+        base_url = "http://api.openweathermap.org/data/2.5/forecast"
+        params = {'lat': latitude, 'lon': longitude, 'appid': api_key, 'units': 'metric'}
+    else:
+        return None, "Error: No location information provided."
 
     try:
         response = requests.get(base_url, params=params)
@@ -17,7 +25,8 @@ def get_weather(api_key, city):
             timestamps = [entry['dt_txt'] for entry in data['list']]
             humidity = [entry['main']['humidity'] for entry in data['list']]
             wind_speed = [entry['wind']['speed'] for entry in data['list']]
-            return timestamps, temperatures, humidity, wind_speed
+            weather_icons = [entry['weather'][0]['icon'] for entry in data['list']]
+            return timestamps, temperatures, humidity, wind_speed, weather_icons
         else:
             return None, f"Error: {data['message']}"
 
@@ -26,16 +35,17 @@ def get_weather(api_key, city):
 
 def get_weather_for_city():
     city = city_entry.get()
-    timestamps, temperatures, humidity, wind_speed = get_weather(api_key, city)
+    timestamps, temperatures, humidity, wind_speed, weather_icons = get_weather(api_key, city)
 
     if temperatures:
         plot_line_graph(timestamps, temperatures)
         result_label.config(text=f"Humidity: {humidity[0]}%\nWind Speed: {wind_speed[0]} m/s")
+        display_weather_icons(weather_icons)
     else:
         result_label.config(text=f"Error fetching weather data")
 
 def plot_line_graph(timestamps, temperatures):
-    plt.figure(figsize=(10, 6))
+    plt.figure(figsize=(8, 4))
     plt.plot(timestamps, temperatures, marker='o', linestyle='-', color='b')
     plt.title("Hourly Temperature Forecast")
     plt.xlabel("Timestamp")
@@ -44,38 +54,58 @@ def plot_line_graph(timestamps, temperatures):
     plt.tight_layout()
     plt.show()
 
+def display_weather_icons(weather_icons):
+    icon_frame = tk.Frame(root, bg='light blue', padx=10, pady=10)
+    icon_frame.pack()
+
+    for icon_id in weather_icons:
+        icon_url = f"http://openweathermap.org/img/wn/{icon_id}.png"
+        image = Image.open(requests.get(icon_url, stream=True).raw)
+        photo = ImageTk.PhotoImage(image)
+
+        icon_label = tk.Label(icon_frame, image=photo, bg='light blue')
+        icon_label.image = photo
+        icon_label.pack(side='left', padx=5)
+
 api_key = "eb4cb5360a01635fc6b465d404a6bf5b"
 
 root = tk.Tk()
 root.title("Weather App")
-root.geometry('1980x800')
-root.config(background='light blue')
+root.geometry('800x600')
+root.config(background='white')
 
-label = Label(root, text="Enter city name:",bg='light green')
-label.pack(pady=22)
-label.config(font=("Times New Roman", 25))
+header_label = Label(root, text="Weather Forecast", bg='white', fg='black')
+header_label.pack(pady=20)
+header_label.config(font=("Times New Roman", 30))
 
-city_entry = Entry(root,bg='light grey')
+city_label = Label(root, text="Enter city name:", bg='white')
+city_label.pack()
+city_label.config(font=("Times New Roman", 18))
+
+city_entry = Entry(root, bg='light grey')
 city_entry.pack(pady=10)
-city_entry.config(font=("Times New Roman", 31))
+city_entry.config(font=("Times New Roman", 16))
 
 get_weather_button = Button(root, text="Get Weather", command=get_weather_for_city, bg='light pink')
-get_weather_button.pack(pady=22)
-get_weather_button.config(font=("Times New Roman", 31))
+get_weather_button.pack(pady=10)
+get_weather_button.config(font=("Times New Roman", 16))
 
 unit_var = StringVar()
-unit_var.set("metric")  
+unit_var.set("metric")
 
-celsius_button = Radiobutton(root, text="Celsius", variable=unit_var, value="metric", bg='aquamarine')
-celsius_button.pack(pady=5)
-celsius_button.config(font=("Times New Roman", 31))
+unit_frame = tk.Frame(root, bg='white')
+unit_frame.pack(pady=10)
 
-fahrenheit_button = Radiobutton(root, text="Fahrenheit", variable=unit_var, value="imperial", bg='aquamarine')
-fahrenheit_button.pack(pady=5)
-fahrenheit_button.config(font=("Times New Roman", 31))
+celsius_button = Radiobutton(unit_frame, text="Celsius", variable=unit_var, value="metric", bg='light blue')
+celsius_button.pack(side='left', padx=20)
+celsius_button.config(font=("Times New Roman", 16))
 
-result_label = Label(root, text="",bg='light green')
+fahrenheit_button = Radiobutton(unit_frame, text="Fahrenheit", variable=unit_var, value="imperial", bg='light blue')
+fahrenheit_button.pack(side='left', padx=20)
+fahrenheit_button.config(font=("Times New Roman", 16))
+
+result_label = Label(root, text="", bg='white')
 result_label.pack(pady=20)
-result_label.config(font=("Times New Roman", 31))
+result_label.config(font=("Times New Roman", 16))
 
 root.mainloop()
